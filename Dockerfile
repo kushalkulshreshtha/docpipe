@@ -7,11 +7,11 @@ COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
 WORKDIR /app
 
 # Copy dependency files first for layer caching
-COPY pyproject.toml .
+COPY pyproject.toml uv.lock ./
 COPY src/ ./src/
 
-# Install dependencies into /app/.venv using uv
-RUN uv sync --no-dev
+# Install dependencies into /app/.venv using uv with frozen lockfile
+RUN uv sync --frozen --no-dev
 
 
 # ─── Stage 2: Runtime ─────────────────────────────────────────────────────────
@@ -36,7 +36,7 @@ COPY --from=builder /app/src /app/src
 # Copy alembic config
 COPY alembic/ ./alembic/
 COPY alembic.ini .
-COPY pyproject.toml .
+COPY pyproject.toml uv.lock ./
 
 # Create upload directory
 RUN mkdir -p /app/data/uploads
