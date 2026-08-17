@@ -80,6 +80,22 @@ async def health_check():
     return {"status": "ok", "service": "docpipe"}
 
 
+async def _run_pipeline_background(
+    document_id: uuid.UUID,
+    parsed: ParsedDocument,
+    filename: str,
+) -> None:
+    """Wrapper function so Starlette's BackgroundTasks correctly identifies the task as an async coroutine."""
+    try:
+        await process_invoice_flow(
+            document_id=document_id,
+            parsed=parsed,
+            filename=filename,
+        )
+    except Exception as e:
+        logger.exception("Background pipeline execution error for %s: %s", document_id, e)
+
+
 # ─── Documents ────────────────────────────────────────────────────────────────
 
 @app.post(
@@ -137,15 +153,52 @@ async def upload_document(
     await session.commit()
     await session.refresh(doc)
 
-    # Kick off pipeline in background
+    # Kick off pipeline in background via async wrapper
     background_tasks.add_task(
-        process_invoice_flow,
+        _run_pipeline_background,
         document_id=doc.id,
         parsed=parsed,
         filename=file.filename,
     )
 
     logger.info("Accepted document %s (%s), pipeline queued", doc.id, file.filename)
+    return doc
+
+
+@app.post(
+    "/documents/{document_id}/reprocess",
+    response_model=DocumentOut,
+    tags=["Documents"],
+    summary="Reprocess an existing document",
+)
+async def reprocess_document(
+    document_id: uuid.UUID,
+    background_tasks: BackgroundTasks,
+    session: AsyncSession = Depends(get_session),
+):
+    doc = await get_document_with_invoice(session, document_id)
+    if not doc:
+        raise HTTPException(status_code=404, detail="Document not found")
+
+    parsed = ParsedDocument(
+        raw_text=doc.raw_text or "",
+        page_count=doc.page_count or 1,
+        file_hash=doc.file_hash,
+        file_size_bytes=doc.file_size_bytes,
+        is_ocr=doc.is_ocr,
+    )
+
+    await update_document_status(session, document_id, ProcessingStatus.PROCESSING)
+    await session.commit()
+    await session.refresh(doc)
+
+    background_tasks.add_task(
+        _run_pipeline_background,
+        document_id=doc.id,
+        parsed=parsed,
+        filename=doc.filename,
+    )
+
     return doc
 
 
