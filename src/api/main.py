@@ -56,7 +56,24 @@ async def get_session() -> AsyncSession:
         yield session
 
 
-# ─── Health ───────────────────────────────────────────────────────────────────
+# ─── Health & Root ─────────────────────────────────────────────────────────
+
+@app.get("/", tags=["System"], summary="API Root / Overview")
+async def root():
+    return {
+        "service": "DocPipe — Invoice Processing API",
+        "status": "online",
+        "docs_url": "/docs",
+        "endpoints": {
+            "upload_pdf": "POST /documents/upload",
+            "list_documents": "GET /documents",
+            "document_detail": "GET /documents/{id}",
+            "analytics_by_category": "GET /analytics/by-category",
+            "analytics_by_vendor": "GET /analytics/by-vendor",
+            "health_check": "GET /health"
+        }
+    }
+
 
 @app.get("/health", tags=["System"])
 async def health_check():
@@ -108,16 +125,17 @@ async def upload_document(
         )
 
     # Create document record
-    async with session.begin():
-        doc = await create_document(
-            session=session,
-            filename=file.filename,
-            file_hash=parsed.file_hash,
-            file_size_bytes=parsed.file_size_bytes,
-            page_count=parsed.page_count,
-            is_ocr=parsed.is_ocr,
-            raw_text=parsed.raw_text,
-        )
+    doc = await create_document(
+        session=session,
+        filename=file.filename,
+        file_hash=parsed.file_hash,
+        file_size_bytes=parsed.file_size_bytes,
+        page_count=parsed.page_count,
+        is_ocr=parsed.is_ocr,
+        raw_text=parsed.raw_text,
+    )
+    await session.commit()
+    await session.refresh(doc)
 
     # Kick off pipeline in background
     background_tasks.add_task(
