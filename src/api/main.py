@@ -21,7 +21,7 @@ from src.storage.repository import (
     get_spend_by_vendor,
     update_document_status,
 )
-from src.ingestion.pdf_parser import parse_pdf
+from src.ingestion.pdf_parser import parse_pdf, ParsedDocument
 from src.pipeline.orchestrator import process_invoice_flow
 
 logger = logging.getLogger(__name__)
