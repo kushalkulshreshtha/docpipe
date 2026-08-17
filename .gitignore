@@ -1,0 +1,34 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Env
+.env
+.env.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# Data (don't commit real invoices)
+data/uploads/
+data/sample_invoices/*.pdf
+
+# Testing
+.coverage
+htmlcov/
+.pytest_cache/
+
+# Docker
+.dockerignore
+
+# Mac
+.DS_Store

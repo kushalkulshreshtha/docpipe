@@ -1,0 +1,21 @@
+services:
+  - type: web
+    name: docpipe
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /health
+    envVars:
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: DATABASE_URL
+        sync: false
+      - key: PREFECT_API_URL
+        sync: false
+      - key: PREFECT_API_KEY
+        sync: false
+      - key: UPLOAD_DIR
+        value: /app/data/uploads
+      - key: LOG_LEVEL
+        value: INFO
+      - key: APP_ENV
+        value: production
